@@ -1,0 +1,21 @@
+{
+  "name": "newsquest-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --use-system-ca --disable-warning=ExperimentalWarning --watch src/index.js",
+    "start": "node --use-system-ca --disable-warning=ExperimentalWarning src/index.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "fast-xml-parser": "^4.5.1",
+    "helmet": "^8.0.0",
+    "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=22.15"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "newsquest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NewsQuest - daily releases from PIB (Government of India) and News On AIR, summarised section-wise and turned into gamified MCQs for competitive exam prep.",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c cyan,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm start -w server",
+    "typecheck": "npm run typecheck -w client",
+    "selftest": "node --use-system-ca --disable-warning=ExperimentalWarning testing/selftest.mjs",
+    "test:api": "node testing/api/api-checks.mjs && node testing/api/auth-e2e.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=22.15"
+  }
+}
