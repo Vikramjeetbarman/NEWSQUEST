@@ -100,8 +100,9 @@ export function HomePage() {
             ))}
           </h1>
           <motion.p variants={fadeUp} custom={2} className="mt-6 max-w-xl text-xl leading-relaxed text-slate-400">
-            NewsQuest pulls fresh releases from the <b>Press Information Bureau</b> and{' '}
-            <b className="font-display font-bold italic text-slate-200">News On AIR</b>, condenses them into section-wise digests and turns every story
+            NewsQuest pulls fresh releases from the <b>Press Information Bureau</b>,{' '}
+            <b className="font-display font-bold italic text-slate-200">The Times of India</b>, and{' '}
+            <b className="font-display font-bold italic text-slate-200">The Hindu</b>, condenses them into section-wise digests and turns every story
             into exam-grade MCQs - UPSC statements, match-the-following, spot the error and more.
           </motion.p>
           <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-4">
@@ -291,7 +292,7 @@ export function HomePage() {
         <div className="relative grid gap-5 md:grid-cols-3">
           <div className="absolute left-[16%] right-[16%] top-10 hidden border-t-[3px] border-dashed border-mauve md:block" />
           {[
-            { icon: Rss, title: 'Fetch', text: 'RSS feeds from PIB (Government of India) and News On AIR are polled on a schedule, de-duplicated and pushed live to your screen.', color: 'bg-bronze text-mauve' },
+            { icon: Rss, title: 'Fetch', text: 'RSS feeds from PIB, The Times of India and The Hindu are polled on a schedule, de-duplicated and pushed live to your screen.', color: 'bg-bronze text-mauve' },
             { icon: BookOpenCheck, title: 'Summarise', text: 'Each story is condensed into a TL;DR and key points; sections get topic-wise digests with an exam lens of people, places, schemes and numbers.', color: 'bg-mauve text-peach' },
             { icon: BrainCircuit, title: 'Quiz', text: `${typeCount} question formats at four difficulty levels - play solo modes, earn XP and badges, and save tricky ones to your Vault for revision.`, color: 'bg-peach text-mauve' },
           ].map((s, i) => (

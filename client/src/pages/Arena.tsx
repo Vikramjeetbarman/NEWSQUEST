@@ -17,7 +17,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader, Skeleton, Spinner, sectionLabel } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,7 +45,19 @@ function useCountdown() {
   return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function Toggle({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: ReactNode; color?: string }) {
+function Toggle({
+  active,
+  onClick,
+  children,
+  color,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  color?: string;
+  count?: number;
+}) {
   return (
     <motion.button
       type="button"
@@ -54,6 +66,7 @@ function Toggle({ active, onClick, children, color }: { active: boolean; onClick
       className={cx(
         'flex items-center gap-1.5 rounded-xl border-2 px-3 py-1.5 text-xs font-bold transition',
         active ? 'border-mauve bg-mauve text-peach shadow-hard-sm' : 'border-mauve/30 bg-ink-900 text-slate-300 hover:border-mauve hover:text-white',
+        count === 0 && !active && 'opacity-60',
       )}
     >
       {active ? (
@@ -62,6 +75,16 @@ function Toggle({ active, onClick, children, color }: { active: boolean; onClick
         color && <span className="h-2.5 w-2.5 rounded-full border-2 border-mauve" style={{ background: color }} />
       )}
       {children}
+      {typeof count === 'number' && (
+        <span
+          className={cx(
+            'font-mono font-normal ml-0.5 px-1 py-0.2 rounded text-[11px]',
+            count === 0 ? 'bg-red-950/40 text-red-400 font-semibold' : 'opacity-75',
+          )}
+        >
+          {count}
+        </span>
+      )}
     </motion.button>
   );
 }
@@ -88,11 +111,75 @@ export function ArenaPage() {
 
   const toggle = <T,>(list: T[], v: T, set: (l: T[]) => void) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-  const pool = useMemo(() => {
+  const matchingPool = useMemo(() => {
     if (!catalog) return 0;
+    if (catalog.matrix) {
+      return catalog.matrix
+        .filter(
+          (m) =>
+            (!sections.length || sections.includes(m.section)) &&
+            (!diffs.length || diffs.includes(m.difficulty)) &&
+            (!types.length || types.includes(m.type)),
+        )
+        .reduce((sum, m) => sum + m.count, 0);
+    }
     if (!sections.length) return catalog.total;
     return sections.reduce((s, k) => s + (catalog.bySection[k] ?? 0), 0);
-  }, [catalog, sections]);
+  }, [catalog, sections, diffs, types]);
+
+  const countForSection = useCallback(
+    (k: SectionKey) => {
+      if (!catalog) return 0;
+      if (catalog.matrix && (diffs.length || types.length)) {
+        return catalog.matrix
+          .filter(
+            (m) =>
+              m.section === k &&
+              (!diffs.length || diffs.includes(m.difficulty)) &&
+              (!types.length || types.includes(m.type)),
+          )
+          .reduce((sum, m) => sum + m.count, 0);
+      }
+      return catalog.bySection[k] ?? 0;
+    },
+    [catalog, diffs, types],
+  );
+
+  const countForDiff = useCallback(
+    (d: Difficulty) => {
+      if (!catalog) return 0;
+      if (catalog.matrix && (sections.length || types.length)) {
+        return catalog.matrix
+          .filter(
+            (m) =>
+              m.difficulty === d &&
+              (!sections.length || sections.includes(m.section)) &&
+              (!types.length || types.includes(m.type)),
+          )
+          .reduce((sum, m) => sum + m.count, 0);
+      }
+      return catalog.byDifficulty[d] ?? 0;
+    },
+    [catalog, sections, types],
+  );
+
+  const countForType = useCallback(
+    (t: string) => {
+      if (!catalog) return 0;
+      if (catalog.matrix && (sections.length || diffs.length)) {
+        return catalog.matrix
+          .filter(
+            (m) =>
+              m.type === t &&
+              (!sections.length || sections.includes(m.section)) &&
+              (!diffs.length || diffs.includes(m.difficulty)),
+          )
+          .reduce((sum, m) => sum + m.count, 0);
+      }
+      return catalog.byType[t] ?? 0;
+    },
+    [catalog, sections, diffs],
+  );
 
   const daily = catalog?.daily;
 
@@ -181,9 +268,14 @@ export function ArenaPage() {
               <div className="label mb-2">Sections {sections.length ? `(${sections.length})` : '(all)'}</div>
               <div className="flex flex-wrap gap-2">
                 {SECTION_ORDER.map((k) => (
-                  <Toggle key={k} active={sections.includes(k)} onClick={() => toggle(sections, k, setSections)} color={SECTION_STYLE[k].color}>
+                  <Toggle
+                    key={k}
+                    active={sections.includes(k)}
+                    onClick={() => toggle(sections, k, setSections)}
+                    color={SECTION_STYLE[k].color}
+                    count={countForSection(k)}
+                  >
                     {sectionLabel(k)}
-                    <span className="font-mono font-normal opacity-75">{catalog?.bySection[k] ?? 0}</span>
                   </Toggle>
                 ))}
               </div>
@@ -192,9 +284,14 @@ export function ArenaPage() {
               <div className="label mb-2">Difficulty {diffs.length ? '' : '(mixed)'}</div>
               <div className="flex flex-wrap gap-2">
                 {(['easy', 'medium', 'hard', 'expert'] as Difficulty[]).map((d) => (
-                  <Toggle key={d} active={diffs.includes(d)} onClick={() => toggle(diffs, d, setDiffs)} color={DIFFICULTY_STYLE[d].color}>
+                  <Toggle
+                    key={d}
+                    active={diffs.includes(d)}
+                    onClick={() => toggle(diffs, d, setDiffs)}
+                    color={DIFFICULTY_STYLE[d].color}
+                    count={countForDiff(d)}
+                  >
                     {DIFFICULTY_STYLE[d].label}
-                    <span className="font-mono font-normal opacity-75">{catalog?.byDifficulty[d] ?? 0}</span>
                   </Toggle>
                 ))}
               </div>
@@ -204,9 +301,14 @@ export function ArenaPage() {
               <div className="flex flex-wrap gap-2">
                 {catalog ? (
                   Object.entries(catalog.types).map(([k, label]) => (
-                    <Toggle key={k} active={types.includes(k)} onClick={() => toggle(types, k, setTypes)} color={PALETTE.bronze}>
+                    <Toggle
+                      key={k}
+                      active={types.includes(k)}
+                      onClick={() => toggle(types, k, setTypes)}
+                      color={PALETTE.bronze}
+                      count={countForType(k)}
+                    >
                       {label}
-                      <span className="font-mono font-normal opacity-75">{catalog.byType[k] ?? 0}</span>
                     </Toggle>
                   ))
                 ) : (
@@ -233,10 +335,26 @@ export function ArenaPage() {
             )}
           </div>
 
-          <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-6 flex flex-wrap items-center gap-3 border-t-2 border-mauve bg-sage px-6 py-4">
-            <span className="text-sm text-slate-400">
-              Pool: <b className="font-display text-lg text-white">{pool}</b> questions{diffs.length || types.length ? ' before difficulty/type filters' : ''}
-            </span>
+          <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-6 flex flex-wrap items-center justify-between gap-4 border-t-2 border-mauve bg-sage px-6 py-4">
+            <div className="flex flex-col gap-0.5">
+              <div className="text-sm text-slate-300">
+                Available pool:{' '}
+                <b className={cx('font-display text-lg', matchingPool === 0 ? 'text-red-400' : 'text-white')}>
+                  {matchingPool}
+                </b>{' '}
+                {matchingPool === 1 ? 'question' : 'questions'}{' '}
+                {sections.length || diffs.length || types.length ? 'matching filters' : 'total'}
+              </div>
+              {matchingPool === 0 ? (
+                <span className="text-xs font-semibold text-red-400">
+                  No questions match this filter combination. Clear or adjust filters before starting.
+                </span>
+              ) : mode === 'classic' && matchingPool < count ? (
+                <span className="text-xs text-amber-300">
+                  Exam will start with all {matchingPool} available question{matchingPool === 1 ? '' : 's'}
+                </span>
+              ) : null}
+            </div>
             <button
               onClick={() =>
                 start({
@@ -244,13 +362,22 @@ export function ArenaPage() {
                   sections: sections.length ? sections : undefined,
                   difficulties: diffs.length ? diffs : undefined,
                   types: types.length ? types : undefined,
-                  count: mode === 'classic' ? count : undefined,
+                  count: mode === 'classic' ? Math.min(count, matchingPool) : undefined,
                 })
               }
-              disabled={starting || !pool}
-              className="btn-cta ml-auto"
+              disabled={starting || matchingPool === 0}
+              className="btn-cta ml-auto disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {starting ? <Spinner className="h-5 w-5" /> : <Swords className="h-5 w-5" />} Start {catalog?.modes[mode]?.label ?? mode}
+              {starting ? (
+                <Spinner className="h-5 w-5" />
+              ) : (
+                <Swords className="h-5 w-5" />
+              )}{' '}
+              {matchingPool === 0
+                ? 'No matching questions'
+                : `Start ${catalog?.modes[mode]?.label ?? mode}${
+                    mode === 'classic' ? ` (${Math.min(count, matchingPool)})` : ''
+                  }`}
             </button>
           </div>
         </motion.div>

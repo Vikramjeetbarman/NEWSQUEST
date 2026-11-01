@@ -312,11 +312,19 @@ export interface DailyStatus {
   sessionId: string | null;
 }
 
+export interface CatalogMatrixItem {
+  section: SectionKey;
+  type: string;
+  difficulty: Difficulty;
+  count: number;
+}
+
 export interface Catalog {
   total: number;
   bySection: Partial<Record<SectionKey, number>>;
   byType: Record<string, number>;
   byDifficulty: Partial<Record<Difficulty, number>>;
+  matrix?: CatalogMatrixItem[];
   modes: Record<ModeKey, ModeInfo>;
   types: Record<string, string>;
   difficulties: Difficulty[];

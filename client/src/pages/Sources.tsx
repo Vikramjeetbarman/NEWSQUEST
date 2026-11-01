@@ -62,8 +62,8 @@ export function SourcesPage() {
           </button>
         }
       >
-        NewsQuest polls the public RSS feeds of the Press Information Bureau (PIB), Government of India, and News On AIR (Prasar Bharati), summarises each release
-        and generates exam-style questions automatically. Every story credits its source and links to the original. NewsQuest is not affiliated with either.
+        NewsQuest polls the public RSS feeds of the Press Information Bureau (PIB), The Times of India, and The Hindu, summarises each release
+        and generates exam-style questions automatically. Every story credits its source and links to the original. NewsQuest is not affiliated with any of them.
       </PageHeader>
 
       {status ? (

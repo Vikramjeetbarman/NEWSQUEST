@@ -44,16 +44,15 @@ export function DifficultyBadge({ d, className }: { d: Difficulty; className?: s
   );
 }
 
-const SRC: Record<SourceKey, { label: string; credit: string | null; className: string }> = {
+const SRC: Partial<Record<SourceKey, { label: string; credit: string | null; className: string }>> = {
   pib: { label: 'PIB', credit: 'Press Information Bureau (PIB), Government of India', className: 'font-display text-xs font-bold italic text-mauve bg-sage border-mauve' },
-  air: { label: 'News On AIR', credit: 'News On AIR, All India Radio (Prasar Bharati)', className: 'font-display text-xs font-bold italic text-peach bg-mauve border-mauve' },
   toi: { label: 'Times of India', credit: 'The Times of India', className: 'font-display text-xs font-bold italic text-mauve bg-bronze border-mauve' },
   hindu: { label: 'The Hindu', credit: 'The Hindu', className: 'font-display text-xs font-bold italic text-peach bg-wood border-mauve' },
   archive: { label: 'Demo Archive', credit: null, className: 'font-mono text-[11px] font-bold uppercase tracking-wider text-mauve bg-bronze border-mauve' },
 };
-export const sourceCredit = (source: SourceKey) => (SRC[source] ?? SRC.archive).credit;
+export const sourceCredit = (source: SourceKey) => (SRC[source] ?? SRC.archive!).credit;
 export function SourceBadge({ source }: { source: SourceKey }) {
-  const s = SRC[source] ?? SRC.archive;
+  const s = SRC[source] ?? SRC.archive!;
   return <span className={cx('border-2 px-2 py-px leading-tight', s.className)}>{s.label}</span>;
 }
 

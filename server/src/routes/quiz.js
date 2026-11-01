@@ -60,7 +60,7 @@ quizRouter.post(
       sections: vList(b.sections, SECTION_KEYS, 20),
       difficulties: vList(b.difficulties, DIFFICULTIES, 4),
       types: vList(b.types, TYPE_KEYS, 20),
-      count: vInt(b.count, { min: 3, max: 30, def: 10 }),
+      count: vInt(b.count, { min: 1, max: 30, def: 10 }),
       articleId: typeof b.articleId === 'string' && QID.test(b.articleId) ? b.articleId : null,
       questionIds: Array.isArray(b.questionIds) ? b.questionIds.filter((x) => typeof x === 'string' && QID.test(x)).slice(0, 50) : [],
     };

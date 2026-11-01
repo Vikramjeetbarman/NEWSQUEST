@@ -2,7 +2,7 @@
   "name": "newsquest",
   "version": "1.0.0",
   "private": true,
-  "description": "NewsQuest - daily releases from PIB (Government of India) and News On AIR, summarised section-wise and turned into gamified MCQs for competitive exam prep.",
+  "description": "NewsQuest - daily releases from PIB (Government of India), Times of India and The Hindu, summarised section-wise and turned into gamified MCQs for competitive exam prep.",
   "workspaces": [
     "server",
     "client"

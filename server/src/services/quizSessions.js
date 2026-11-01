@@ -375,7 +375,7 @@ async function answer(sid, user, { questionId, choice }) {
 async function advance(sid, user) {
   const s = getSession(sid, user.id);
   if (s.finished) return view(s);
-  if (s.phase !== 'reveal') {
+  if (s.phase === 'reveal') {
     s.index++;
     s.phase = 'question';
     s.removed = [];
@@ -513,6 +513,7 @@ export async function  catalog() {
     bySection: sum('section'),
     byType: sum('type'),
     byDifficulty: sum('difficulty'),
+    matrix: rows.map((r) => ({ section: r.section, type: r.type, difficulty: r.difficulty, count: Number(r.n) })),
     modes: MODES,
     types: QUESTION_TYPES,
     difficulties: DIFFICULTIES,

@@ -18,7 +18,7 @@ function DemoBanner() {
           <Info className="h-3 w-3" /> Notice to readers
         </span>
         <span className="order-last w-full italic sm:order-none sm:w-auto">
-          Live feeds from PIB & News On AIR are not reachable from this network, so you are reading the{' '}
+          Live feeds from PIB, Times of India & The Hindu are not reachable from this network, so you are reading the{' '}
           <b className="not-italic">Demo Archive</b>. NewsQuest keeps retrying every {status?.intervalMinutes ?? 15} min and switches to live news automatically.
         </span>
         <Link to="/sources" className="ml-auto shrink-0 border-2 border-mauve px-2 py-0.5 font-condensed text-[11px] font-semibold uppercase tracking-[0.16em] text-mauve transition hover:bg-mauve hover:text-peach">
@@ -80,7 +80,7 @@ export function Layout() {
             <Logo />
             <p className="flex items-start justify-center gap-1.5 text-center italic md:px-6">
               <Sparkles className="-mt-0.5 h-3.5 w-3.5 shrink-0 text-mauve" />
-              Stories are summarised from releases of the Press Information Bureau (PIB), Government of India, and News On AIR (Prasar Bharati), with a link to each original. NewsQuest is an independent app and is not affiliated with or endorsed by the Government of India or Prasar Bharati. Summaries and questions are generated automatically - verify before you rely on them.
+              Stories are summarised from releases of the Press Information Bureau (PIB), The Times of India, and The Hindu, with a link to each original. NewsQuest is an independent app and is not affiliated with or endorsed by any publication. Summaries and questions are generated automatically - verify before you rely on them.
             </p>
             <p className="dateline text-center md:text-right">
               Printed in your browser

@@ -13,7 +13,6 @@ export const SECTIONS = {
 
 export const SOURCES = {
   pib: { name: 'Press Information Bureau', short: 'PIB', home: 'https://pib.gov.in', credit: 'Press Information Bureau (PIB), Government of India' },
-  air: { name: 'News On AIR', short: 'AIR', home: 'https://www.newsonair.gov.in', credit: 'News On AIR, All India Radio (Prasar Bharati)' },
   toi: { name: 'The Times of India', short: 'TOI', home: 'https://timesofindia.indiatimes.com', credit: 'The Times of India' },
   hindu: { name: 'The Hindu', short: 'TH', home: 'https://www.thehindu.com', credit: 'The Hindu' },
   archive: { name: 'Demo Archive', short: 'ARC', home: null, credit: null },
@@ -27,7 +26,6 @@ export const FEEDS = [
 
 export const ALLOWED_HOSTS = [
   'pib.gov.in',
-  'newsonair.gov.in',
   'timesofindia.indiatimes.com',
   'indiatimes.com',
   'thehindu.com',
