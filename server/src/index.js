@@ -12,7 +12,7 @@ import { startScheduler } from './services/pipeline.js';
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 'loopback');
+app.set('trust proxy', 1);
 
 app.use(
   helmet({
