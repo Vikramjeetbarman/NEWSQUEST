@@ -3,7 +3,7 @@ import { config } from '../config.js';
 import { all, one, run } from '../db.js';
 import { buildDigest } from '../nlp/analyze.js';
 import { truncate } from '../nlp/text.js';
-import { ARTICLE_META_COLS, QUESTION_TYPES, rowToArticle } from '../quiz/engine.js';
+import { QUESTION_TYPES, rowToArticle } from '../quiz/engine.js';
 import { aiEnabled } from '../services/ai.js';
 import { evaluateAchievements, updateStats } from '../services/gamification.js';
 import { requireUser } from '../services/auth.js';
@@ -18,6 +18,12 @@ export const newsRouter = Router();
 const SECTION_KEYS = Object.keys(SECTIONS);
 const SOURCE_KEYS = Object.keys(SOURCES);
 const ID = /^[a-f0-9]{16}$/;
+const ARTICLE_CARD_COLS =
+  'id, source, section, title, description, image, link, published_at, summary, keywords, is_demo, deep, ai';
+const ARTICLE_TREND_COLS = `${ARTICLE_CARD_COLS}, entities`;
+const ARTICLE_DIGEST_COLS = 'id, section, title, description, published_at, summary, keywords, entities';
+const ARTICLE_RELATED_COLS = 'id, section, title, entities';
+let trendingCache = null;
 
 function card(a, counts) {
   return {
@@ -103,7 +109,7 @@ newsRouter.get(
     const w = where.join(' AND ');
     const [count, rows] = await Promise.all([
       one(`SELECT COUNT(*) AS n FROM articles WHERE ${w}`, args.slice()),
-      all(`SELECT ${ARTICLE_META_COLS} FROM articles WHERE ${w} ORDER BY published_at DESC, id LIMIT ${p(limit)} OFFSET ${p(offset)}`, args),
+      all(`SELECT ${ARTICLE_CARD_COLS} FROM articles WHERE ${w} ORDER BY published_at DESC, id LIMIT ${p(limit)} OFFSET ${p(offset)}`, args),
     ]);
     res.json({ items: await cards(rows.map(rowToArticle)), total: count.n });
   }),
@@ -122,7 +128,13 @@ newsRouter.get(
 newsRouter.get(
   '/news/trending',
   asyncH(async (_req, res) => {
-    const rows = (await all(`SELECT ${ARTICLE_META_COLS} FROM articles WHERE is_demo = $1 ORDER BY published_at DESC LIMIT 150`, [demoScope()])).map(
+    const scope = demoScope();
+    const stamp = await one('SELECT MAX(fetched_at) AS fetched, COUNT(*) AS count FROM articles WHERE is_demo = $1', [scope]);
+    const key = `${scope}:${stamp.fetched}:${stamp.count}`;
+    if (trendingCache?.key === key && Date.now() - trendingCache.createdAt < 5 * 60_000) {
+      return res.json(trendingCache.data);
+    }
+    const rows = (await all(`SELECT ${ARTICLE_TREND_COLS} FROM articles WHERE is_demo = $1 ORDER BY published_at DESC LIMIT 150`, [scope])).map(
       rowToArticle,
     );
     const topics = new Map();
@@ -144,7 +156,9 @@ newsRouter.get(
       .map((t) => ({ ...t, articleIds: t.articleIds.slice(0, 6) }));
     const hot = new Set(list.slice(0, 8).flatMap((t) => t.articleIds));
     const stories = rows.filter((a) => hot.has(a.id)).slice(0, 6);
-    res.json({ topics: list, stories: await cards(stories) });
+    const data = { topics: list, stories: await cards(stories) };
+    trendingCache = { key, createdAt: Date.now(), data };
+    res.json(data);
   }),
 );
 
@@ -160,8 +174,8 @@ newsRouter.get(
     if (!digestCache.has(key)) {
       const rows =
         section === 'all'
-          ? await all(`SELECT ${ARTICLE_META_COLS} FROM articles WHERE is_demo = $1 ORDER BY published_at DESC LIMIT 80`, [scope])
-          : await all(`SELECT ${ARTICLE_META_COLS} FROM articles WHERE is_demo = $1 AND section = $2 ORDER BY published_at DESC LIMIT 60`, [
+          ? await all(`SELECT ${ARTICLE_DIGEST_COLS} FROM articles WHERE is_demo = $1 ORDER BY published_at DESC LIMIT 80`, [scope])
+          : await all(`SELECT ${ARTICLE_DIGEST_COLS} FROM articles WHERE is_demo = $1 AND section = $2 ORDER BY published_at DESC LIMIT 60`, [
               scope,
               section,
             ]);
@@ -186,8 +200,8 @@ newsRouter.get(
     const qs = await all('SELECT type, difficulty, COUNT(*) AS n FROM questions WHERE article_id = $1 GROUP BY type, difficulty', [a.id]);
     const keyEnts = (x) => (x.entities || []).filter((e) => !['MISC', 'TERM'].includes(e.type) && e.text !== 'India');
     const ents = new Set(keyEnts(a).slice(0, 6).map((e) => e.text.toLowerCase()));
-    const related = (
-      await all(`SELECT ${ARTICLE_META_COLS} FROM articles WHERE is_demo = $1 AND id != $2 ORDER BY published_at DESC LIMIT 120`, [
+    const relatedCandidates = (
+      await all(`SELECT ${ARTICLE_RELATED_COLS} FROM articles WHERE is_demo = $1 AND id != $2 ORDER BY published_at DESC LIMIT 120`, [
         a.isDemo ? 1 : 0,
         a.id,
       ])
@@ -201,7 +215,12 @@ newsRouter.get(
       .filter((x) => x.shared >= 2 || (x.shared === 1 && x.o.section === a.section))
       .sort((x, y) => y.score - x.score)
       .slice(0, 4)
-      .map((x) => x.o);
+      .map((x) => x.o.id);
+    const relatedRows = relatedCandidates.length
+      ? await all(`SELECT ${ARTICLE_CARD_COLS} FROM articles WHERE id = ANY($1)`, [relatedCandidates])
+      : [];
+    const relatedById = new Map(relatedRows.map(rowToArticle).map((article) => [article.id, article]));
+    const related = relatedCandidates.map((id) => relatedById.get(id)).filter(Boolean);
     const read = req.user ? Boolean(await one('SELECT 1 FROM reads WHERE user_id = $1 AND article_id = $2', [req.user.id, a.id])) : false;
     const [main, ...relatedCards] = await cards([a, ...related]);
     res.json({

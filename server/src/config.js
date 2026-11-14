@@ -28,7 +28,7 @@ export const config = {
     schema: env.DATABASE_SCHEMA || null,
   },
   clientDist: path.resolve(SERVER_ROOT, '..', 'client', 'dist'),
-  fetchIntervalMinutes: num(env.FETCH_INTERVAL_MINUTES, 5, 1, 1440),
+  fetchIntervalMinutes: num(env.FETCH_INTERVAL_MINUTES, 15, 1, 1440),
   maxArticleAgeDays: num(env.MAX_ARTICLE_AGE_DAYS, 7, 1, 90),
   demoFallback: bool(env.DEMO_FALLBACK, true),
   timezone: env.APP_TIMEZONE || 'Asia/Kolkata',

@@ -2,15 +2,40 @@ import { extractEntities, extractNumbers } from './entities.js';
 import { contentTokens, keyphrases, normKey, splitSentences, truncate, wordCount } from './text.js';
 
 const df = new Map();
+const documents = new Map();
 let docCount = 0;
 
-export function corpusAdd(text) {
-    for (const t of new Set(contentTokens(text))) df.set(t, (df.get(t) || 0) + 1);
+export function corpusAdd(text, id) {
+    const tokens = new Set(contentTokens(text));
+    const previous = documents.get(id);
+    if (previous) {
+        for (const t of previous) {
+            const n = df.get(t) || 0;
+            if (n <= 1) df.delete(t);
+            else df.set(t, n - 1);
+        }
+        docCount--;
+    }
+    documents.set(id, tokens);
+    for (const t of tokens) df.set(t, (df.get(t) || 0) + 1);
     docCount++;
+}
+
+export function corpusRemove(id) {
+    const tokens = documents.get(id);
+    if (!tokens) return;
+    for (const t of tokens) {
+        const n = df.get(t) || 0;
+        if (n <= 1) df.delete(t);
+        else df.set(t, n - 1);
+    }
+    documents.delete(id);
+    docCount--;
 }
 
 export function corpusReset() {
     df.clear();
+    documents.clear();
     docCount = 0;
 }
 

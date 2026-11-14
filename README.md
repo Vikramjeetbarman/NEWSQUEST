@@ -56,7 +56,7 @@ Everything under `testing/` is optional and not needed to run the app:
 
 ## Features
 
-- **Live news pipeline:** the PIB and News On AIR RSS feeds are polled every `FETCH_INTERVAL_MINUTES` (default 5, minimum 1). New stories are de-duplicated, classified into 10 sections, and summarised (TL;DR + key points). Keywords and entities (people, places, organisations, schemes, laws, reports, awards) are extracted. New-story alerts reach the browser instantly over Server-Sent Events, and a toast and the live ticker update without a reload.
+- **Live news pipeline:** the PIB and News On AIR RSS feeds are polled every `FETCH_INTERVAL_MINUTES` (default 15, minimum 1). New stories are de-duplicated, classified into 10 sections, and summarised (TL;DR + key points). Keywords and entities (people, places, organisations, schemes, laws, reports, awards) are extracted. New-story alerts reach the browser instantly over Server-Sent Events, and a toast and the live ticker update without a reload.
 - **Section digests:** for each section you get a brief, a theme cloud, storyline clusters (as a timeline), "numbers in news", and an **exam lens** of people, places, schemes, laws and reports.
 - **14 question types:**
   - Headline Hunt, Fill in the Blank, Numbers in News, Spot the Fact, Spot the Error.
@@ -90,7 +90,7 @@ Everything under `testing/` is optional and not needed to run the app:
 | `DATABASE_URL` | `postgres://newsquest@localhost:5432/newsquest` | PostgreSQL connection string. Hosted databases usually need `?sslmode=require` on the end. |
 | `DATABASE_SCHEMA` | `public` | Optional schema to use instead, e.g. when sharing a database |
 | `PORT` | `8787` | |
-| `FETCH_INTERVAL_MINUTES` | `5` | 1-1440. Use `1` for "every minute". |
+| `FETCH_INTERVAL_MINUTES` | `15` | 1-1440. Use `1` for "every minute". |
 | `DEMO_FALLBACK` | `true` | Shows a built-in archive of 30 stories (331 questions) when feeds are unreachable |
 | `FULL_TEXT_MODE` | `ondemand` | `off` / `ondemand` ("Deep read" button) / `background` |
 | `MAX_ARTICLE_AGE_DAYS` | `7` | Older live stories are pruned |

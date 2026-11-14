@@ -116,18 +116,25 @@ export const ARTICLE_META_COLS =
   'id, source, section, feed_id, title, title_key, link, description, image, author, published_at, fetched_at, summary, keywords, entities, is_demo, deep, ai';
 
 export async function generateFor(articleIds, { isDemo = null } = {}) {
-  const cols = `${ARTICLE_META_COLS}, CASE WHEN id = ANY($1) THEN content END AS content`;
-  const rows =
-    isDemo === null
-      ? await all(`SELECT ${cols} FROM articles`, [articleIds])
-      : await all(`SELECT ${cols} FROM articles WHERE is_demo = $2`, [articleIds, isDemo ? 1 : 0]);
-  const articles = rows.map(rowToArticle);
+  const targetScope = isDemo === null ? '' : ' AND is_demo = $2';
+  const targetArgs = isDemo === null ? [articleIds] : [articleIds, isDemo ? 1 : 0];
+  const targetRows = await all(
+    `SELECT ${ARTICLE_META_COLS}, content FROM articles WHERE id = ANY($1)${targetScope}`,
+    targetArgs,
+  );
+  const contextScope = isDemo === null ? '' : ' WHERE is_demo = $1';
+  const contextArgs = isDemo === null ? [] : [isDemo ? 1 : 0];
+  const contextRows = await all(
+    `SELECT id, source, section, title, link, published_at, keywords, entities FROM articles${contextScope}`,
+    contextArgs,
+  );
+  const articles = contextRows.map(rowToArticle);
+  const targets = targetRows.map(rowToArticle);
   const pools = buildPools(articles);
-  const wanted = new Set(articleIds);
   const qs = [];
-  for (const a of articles) if (wanted.has(a.id)) qs.push(...generateArticleQuestions(a, pools));
+  for (const a of targets) qs.push(...generateArticleQuestions(a, pools));
 
-  const touched = new Set(articles.filter((a) => wanted.has(a.id)).map((a) => a.section));
+  const touched = new Set(targets.map((a) => a.section));
   for (const section of touched) {
     const secArticles = articles.filter((a) => a.section === section).sort((x, y) => y.publishedAt - x.publishedAt).slice(0, 24);
     for (let i = 0; i < 3; i++) {

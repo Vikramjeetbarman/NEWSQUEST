@@ -1,7 +1,7 @@
 import { config } from '../config.js';
 import { DEMO_ARTICLES } from '../data/demo.js';
 import { all, insertMany, one, run, tx } from '../db.js';
-import { analyzeArticle, corpusAdd, corpusReset } from '../nlp/analyze.js';
+import { analyzeArticle, corpusAdd, corpusRemove, corpusReset } from '../nlp/analyze.js';
 import { normKey } from '../nlp/text.js';
 import { generateFor, rowToArticle, saveQuestions } from '../quiz/engine.js';
 import { HttpError, hash, seededRandom, shuffle } from '../util.js';
@@ -21,7 +21,7 @@ const corpusText = (a) => `${a.title} ${a.description} ${a.content || ''}`;
 
 export async function rebuildCorpus() {
   corpusReset();
-  for (const r of await all('SELECT title, description, content FROM articles')) corpusAdd(corpusText(r));
+  for (const r of await all('SELECT id, title, description, content FROM articles')) corpusAdd(corpusText(r), r.id);
 }
 
 export async function ingest(items, { isDemo = false } = {}) {
@@ -36,7 +36,7 @@ export async function ingest(items, { isDemo = false } = {}) {
   const titles = new Set(known.filter((r) => r.is_demo === scope).map((r) => r.title_key));
   const fresh = items.filter((it) => !ids.has(it.id) && !titles.has(it.titleKey));
   if (!fresh.length) return [];
-  fresh.forEach((it) => corpusAdd(corpusText(it)));
+  fresh.forEach((it) => corpusAdd(corpusText(it), it.id));
   const now = Date.now();
   const rows = fresh.map((it) => {
     const an = analyzeArticle(it);
@@ -113,7 +113,13 @@ export function publicStatus() {
 
 function prune() {
   const cutoff = Date.now() - config.maxArticleAgeDays * 86_400_000;
-  return run('DELETE FROM articles WHERE is_demo = 0 AND (published_at < $1 OR source <> ALL($2))', [cutoff, Object.keys(SOURCES)]);
+  return all(
+    'DELETE FROM articles WHERE is_demo = 0 AND (published_at < $1 OR source <> ALL($2)) RETURNING id',
+    [cutoff, Object.keys(SOURCES)],
+  ).then((deleted) => {
+    for (const article of deleted) corpusRemove(article.id);
+    return deleted.length;
+  });
 }
 
 export async function runCycle() {
@@ -124,8 +130,7 @@ export async function runCycle() {
   try {
     const items = await fetchAllFeeds();
     added = await ingest(items, { isDemo: false });
-    const pruned = await prune();
-    if (pruned) await rebuildCorpus();
+    await prune();
     await refreshLiveCount();
     scheduler.lastError = null;
   } catch (err) {
@@ -180,8 +185,9 @@ export function deepenArticle(id) {
     if (row.deep) return rowToArticle(row);
     if (config.fullTextMode === 'off') throw new HttpError(400, 'Full-text reading is disabled on this server');
     const text = await fetchFullText(row.link);
-    const a = { ...rowToArticle(row), content: text };
-    corpusAdd(text);
+    const previous = rowToArticle(row);
+    const a = { ...previous, content: text };
+    corpusAdd(corpusText(a), a.id);
     const an = analyzeArticle(a);
     await tx(async () => {
       await run('UPDATE articles SET content = $1, summary = $2, keywords = $3, entities = $4, deep = 1 WHERE id = $5', [

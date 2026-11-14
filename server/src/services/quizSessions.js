@@ -56,7 +56,7 @@ function serial(key, fn) {
   return job;
 }
 
-async function candidateRows({ sections, difficulties, types, articleId }) {
+async function candidateRows({ sections, difficulties, types, articleId }, userId = null) {
   const args = [demoScope()];
   const p = (v) => `$${args.push(v)}`;
   const where = ['a.is_demo = $1'];
@@ -64,19 +64,35 @@ async function candidateRows({ sections, difficulties, types, articleId }) {
   if (sections?.length) where.push(`q.section = ANY(${p(sections)})`);
   if (difficulties?.length) where.push(`q.difficulty = ANY(${p(difficulties)})`);
   if (types?.length) where.push(`q.type = ANY(${p(types)})`);
+  const seen = userId
+    ? `EXISTS (SELECT 1 FROM answers ans WHERE ans.user_id = ${p(userId)} AND ans.question_id = q.id)`
+    : 'FALSE';
   const rows = await all(
-    `SELECT q.* FROM questions q JOIN articles a ON a.id = q.article_id WHERE ${where.join(' AND ')}
+    `SELECT q.id, q.article_id, q.type, q.difficulty, ${seen} AS seen
+    FROM questions q JOIN articles a ON a.id = q.article_id WHERE ${where.join(' AND ')}
     ORDER BY a.published_at DESC, q.id LIMIT 1500`,
     args,
   );
-  return rows.map(rowToQuestion);
+  return rows.map((r) => ({
+    id: r.id,
+    articleId: r.article_id,
+    type: r.type,
+    difficulty: r.difficulty,
+    seen: r.seen,
+  }));
+}
+
+async function loadQuestions(ids) {
+  if (!ids.length) return [];
+  const rows = await all('SELECT * FROM questions WHERE id = ANY($1)', [ids]);
+  const byId = new Map(rows.map(rowToQuestion).map((q) => [q.id, q]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
 async function pickQuestions(userId, filters, count, { perArticle = 2, rand = Math.random } = {}) {
-  const candidates = await candidateRows(filters);
-  const seen = new Set((await all('SELECT DISTINCT question_id FROM answers WHERE user_id = $1', [userId])).map((r) => r.question_id));
-  const fresh = shuffle(candidates.filter((q) => !seen.has(q.id)), rand);
-  const old = shuffle(candidates.filter((q) => seen.has(q.id)), rand);
+  const candidates = await candidateRows(filters, userId);
+  const fresh = shuffle(candidates.filter((q) => !q.seen), rand);
+  const old = shuffle(candidates.filter((q) => q.seen), rand);
   const out = [];
   const picked = new Set();
   const pool = [...fresh, ...old];
@@ -96,7 +112,7 @@ async function pickQuestions(userId, filters, count, { perArticle = 2, rand = Ma
       perType.set(q.type, t + 1);
     }
   }
-  return out;
+  return loadQuestions(out.map((q) => q.id));
 }
 
 async function dailyQuestions() {
@@ -120,7 +136,8 @@ async function dailyQuestions() {
     usedType.set(q.type, (usedType.get(q.type) || 0) + 1);
   }
   const order = { easy: 0, medium: 1, hard: 2, expert: 3 };
-  return out.sort((a, b) => order[a.difficulty] - order[b.difficulty]);
+  const selected = out.sort((a, b) => order[a.difficulty] - order[b.difficulty]);
+  return loadQuestions(selected.map((q) => q.id));
 }
 
 async function practiceQuestions(userId, ids) {
