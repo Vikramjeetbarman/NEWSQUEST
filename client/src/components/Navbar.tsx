@@ -39,7 +39,7 @@ export function Masthead() {
   const date = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const issue = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86_400_000);
   const vol = ROMAN[today.getFullYear() - 2026] ?? String(today.getFullYear() - 2025);
-  const stories = meta?.sections.reduce((s, x) => s + x.questions, 0) ?? 0;
+  const stories = meta?.sections.reduce((s, x) => s + x.articles, 0) ?? 0;
   const questions = meta?.sections.reduce((s, x) => s + x.questions, 0) ?? 0;
   const live = status?.mode === 'live';
 
